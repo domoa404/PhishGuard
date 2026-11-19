@@ -1,0 +1,6 @@
+{
+  "name": "PhishGuard",
+  "description": "PhishGuard – Advanced Phishing Detection, Risk Assessment & Incident Response Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
