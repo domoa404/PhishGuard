@@ -1,19 +1,6 @@
 export type Language = 'en' | 'ar';
 
-export type UserRole = 'Administrator' | 'Security Analyst' | 'Viewer';
-
-export type NavSection =
-  | 'dashboard'
-  | 'email'
-  | 'url'
-  | 'intel'
-  | 'risk'
-  | 'incidents'
-  | 'forensics'
-  | 'simulation'
-  | 'reports'
-  | 'history'
-  | 'settings';
+export type ToolTab = 'email' | 'url' | 'risk' | 'results';
 
 export type EmailClassification =
   | 'Legitimate'
@@ -23,14 +10,6 @@ export type EmailClassification =
 
 export type ThreatSeverity = 'Low' | 'Medium' | 'High' | 'Critical';
 
-export type NistStage =
-  | 'Preparation'
-  | 'Detection & Analysis'
-  | 'Containment'
-  | 'Eradication'
-  | 'Recovery'
-  | 'Post-Incident Review';
-
 export type RiskTreatment = 'Avoid' | 'Mitigate' | 'Transfer' | 'Accept';
 
 export type IndicatorLevel = 'confirmed_malicious' | 'suspicious' | 'informational';
@@ -39,6 +18,8 @@ export interface FindingIndicator {
   id: string;
   level: IndicatorLevel;
   category: string;
+  categoryAr: string;
+  weight: number;
   title: string;
   titleAr: string;
   detail: string;
@@ -55,34 +36,41 @@ export interface EmailAuthResults {
 }
 
 export interface EmailAnalysisResult {
+  id: string;
+  analyzedAt: string;
   senderEmail: string;
   senderDisplayName: string;
   replyTo: string;
+  returnPath: string;
   subject: string;
   sanitizedBodyPreview: string;
-  extractedUrls: string[];
+  extractedUrls: Array<{ url: string; riskScore: number; classification: EmailClassification }>;
   attachments: Array<{
     filename: string;
     extension: string;
     riskLevel: ThreatSeverity;
     reason: string;
+    reasonAr: string;
   }>;
   auth: EmailAuthResults;
   headers: Array<{ key: string; value: string }>;
   routingHops: string[];
   classification: EmailClassification;
+  severity: ThreatSeverity;
   riskScore: number;
   confidence: number;
+  scoreBreakdown: Array<{ category: string; categoryAr: string; points: number }>;
   findings: FindingIndicator[];
-  iocs: Array<{ type: string; value: string; level: IndicatorLevel }>;
   explanation: string;
   explanationAr: string;
   recommendedActions: string[];
   recommendedActionsAr: string[];
-  analysisMode: 'Local Heuristic Engine' | 'Heuristic + Threat Intelligence';
+  intelligenceMode: 'heuristic_only';
 }
 
 export interface UrlAnalysisResult {
+  id: string;
+  analyzedAt: string;
   submittedInput: string;
   normalizedUrl: string;
   protocol: string;
@@ -96,191 +84,39 @@ export interface UrlAnalysisResult {
   isIpBased: boolean;
   isHttps: boolean;
   hasPunycode: boolean;
+  hasAtSymbol: boolean;
   typosquatTarget: string | null;
+  isShortener: boolean;
   urlLength: number;
   encodingCount: number;
   classification: EmailClassification;
+  severity: ThreatSeverity;
   riskScore: number;
   confidence: number;
+  scoreBreakdown: Array<{ category: string; categoryAr: string; points: number }>;
   findings: FindingIndicator[];
+  explanation: string;
+  explanationAr: string;
   recommendedActions: string[];
   recommendedActionsAr: string[];
-  intelligenceSource: string;
-  intelligenceVerified: boolean;
-  checkedAt: string;
+  intelligenceMode: 'heuristic_only';
+  externalIntelStatus: string;
+  externalIntelStatusAr: string;
 }
 
-export interface ScanRecord {
+export interface RiskAssessmentResult {
   id: string;
-  analysisType: 'email' | 'url';
-  submittedObject: string;
-  classification: EmailClassification;
-  severity: ThreatSeverity;
-  riskScore: number;
-  confidence: number;
-  analyst: string;
-  incidentId: string | null;
-  createdAt: string;
-  details: EmailAnalysisResult | UrlAnalysisResult;
-}
-
-export interface ThreatIntelRecord {
-  id: string;
-  indicator: string;
-  iocType: 'IP' | 'Domain' | 'URL' | 'MD5' | 'SHA-1' | 'SHA-256';
-  category: string;
-  reputationScore: number;
-  severity: ThreatSeverity;
-  source: string;
-  verifiedExternal: boolean;
-  firstSeen: string;
-  lastUpdated: string;
-  notes: string;
-}
-
-export interface RiskRecord {
-  id: string;
-  assetAffected: string;
-  threatDescription: string;
-  vulnerability: string;
+  evaluatedAt: string;
+  assetName: string;
+  threatScenario: string;
   likelihood: number;
   impact: number;
-  inherentRisk: number;
+  inherentScore: number;
   inherentLevel: ThreatSeverity;
-  existingControls: string;
   controlEffectiveness: number;
-  residualRisk: number;
+  residualScore: number;
   residualLevel: ThreatSeverity;
-  riskOwner: string;
-  treatmentStrategy: RiskTreatment;
-  treatmentStatus: 'Open' | 'In Progress' | 'Controlled' | 'Accepted';
-  mitigationPlan: string;
-  recommendations: string;
-  linkedIncidentId: string | null;
-  updatedAt: string;
-}
-
-export interface IncidentResponseAction {
-  id: string;
-  actionKey: string;
-  label: string;
-  simulated: boolean;
-  executedBy: string;
-  executedAt: string;
-  notes: string;
-}
-
-export interface IncidentRecord {
-  id: string;
-  title: string;
-  category: string;
-  severity: ThreatSeverity;
-  detectedAt: string;
-  affectedAsset: string;
-  threatSource: string;
-  riskScore: number;
-  assignedAnalyst: string;
-  status: 'Open' | 'Investigating' | 'Contained' | 'Closed';
-  nistStage: NistStage;
-  evidenceSummary: string;
-  investigationNotes: string;
-  linkedScanId: string | null;
-  linkedRiskId: string | null;
-  actions: IncidentResponseAction[];
-}
-
-export interface EvidenceRecord {
-  id: string;
-  incidentId: string;
-  source: string;
-  evidenceType: 'Email Header' | 'Raw EML' | 'URL Artifact' | 'Auth Log' | 'Attachment Metadata';
-  collectedAt: string;
-  collectedBy: string;
-  sha256Hash: string;
-  status: 'Verified' | 'Quarantined' | 'Archived';
-  contentPreview: string;
-}
-
-export interface TimelineEventRecord {
-  id: string;
-  incidentId: string;
-  timestamp: string;
-  phase: string;
-  actor: string;
-  description: string;
-}
-
-export interface AuditLogRecord {
-  id: string;
-  timestamp: string;
-  actor: string;
-  role: UserRole;
-  action: string;
-  target: string;
-  category: 'scan' | 'incident' | 'risk' | 'forensics' | 'simulation' | 'settings' | 'intel';
-  simulated: boolean;
-  details: string;
-}
-
-export interface NotificationItem {
-  id: string;
-  title: string;
-  titleAr: string;
-  severity: ThreatSeverity;
-  createdAt: string;
-  read: boolean;
-  targetSection: NavSection;
-}
-
-export interface UserAccount {
-  id: string;
-  username: string;
-  displayName: string;
-  email: string;
-  role: UserRole;
-  active: boolean;
-  createdAt: string;
-}
-
-export interface SimulationAttempt {
-  id: string;
-  scenarioId: string;
-  scenarioTitle: string;
-  analyst: string;
-  score: number;
-  maxScore: number;
-  selectedThreat: string;
-  selectedActions: string[];
-  passed: boolean;
-  completedAt: string;
-}
-
-export interface DashboardSummary {
-  metrics: {
-    totalEmailsAnalyzed: number;
-    phishingEmailsDetected: number;
-    maliciousUrlsIdentified: number;
-    suspiciousDomains: number;
-    activeSecurityIncidents: number;
-    criticalRiskEvents: number;
-    resolvedIncidents: number;
-  };
-  trendSeries: Array<{
-    bucket: string;
-    phishing: number;
-    suspicious: number;
-    legitimate: number;
-    urls: number;
-  }>;
-  emailDistribution: Array<{ name: string; key: string; value: number }>;
-  riskDistribution: Array<{ level: ThreatSeverity; count: number }>;
-  recentIncidents: IncidentRecord[];
-  latestScans: ScanRecord[];
-  recentSuspiciousDomains: Array<{
-    domain: string;
-    riskScore: number;
-    classification: EmailClassification;
-    source: string;
-    detectedAt: string;
-  }>;
+  strategy: RiskTreatment;
+  recommendationsEn: string[];
+  recommendationsAr: string[];
 }
